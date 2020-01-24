@@ -1,0 +1,298 @@
+#include "stdafx.h"
+#include<iostream>
+#include<iomanip>
+#include<cmath>
+#include<memory>
+#include<string>
+#include <conio.h>
+#include<fstream>
+#include<tuple>
+using namespace std;
+#pragma warning(disable:4996)
+
+enum enumPredmeti { Matematika, Historija, Geografia, Hemija, Biologija, Engleski };
+enum enumRazredi { I, II, III, IV };
+const char *crt = "\n--------------------------------------------\n";
+const char *Predmeti_[] = { "Matematika", "Historija", "Geografija", "Hemija", "Biologija", "Engleski" };
+const char *Razredi_[] = { "I", "II", "III", "IV" };
+
+struct Datum {
+	int * _dan, *_mjesec, *_godina;
+	void Unos(int d, int m, int g) {
+		_dan = new int(d);
+		_mjesec = new int(m);
+		_godina = new int(g);
+	}
+	void Ispis() { cout << *_dan << "/" << *_mjesec << "/" << *_godina << endl; }
+	void Dealociraj() { delete _dan; delete _mjesec; delete _godina; }
+
+	bool DaLiJeVeci(Datum d) {
+		if (*_godina > *d._godina)
+			return false;
+		if (*_godina > *d._godina && *_mjesec > *d._mjesec)
+			return false;
+		if (*_godina > *d._godina && *_mjesec > *d._mjesec && *_dan > *d._dan)
+			return false;
+		else return true;
+	}
+	bool DaLiJeManji(Datum d) {
+		if (*_godina < *d._godina)
+			return false;
+		if (*_godina < *d._godina && *_mjesec < *d._mjesec)
+			return false;
+		if (*_godina < *d._godina && *_mjesec < *d._mjesec && *_dan < *d._dan)
+			return false;
+		else return true;
+	}
+	bool ProvjeraZa15Dana(Datum d) {
+		if (*d._godina > *_godina)
+			return true;
+		else if (*d._godina > *_godina && *d._mjesec == *_mjesec)
+			return true;
+		else if(*d._godina > *_godina && *d._mjesec == *_mjesec && *d._dan - *_dan > 15)
+			return true;
+		else return false;
+	}
+};
+
+struct Kurs {
+	enumPredmeti _predmet;
+	enumRazredi _razredi;
+	Datum * _pocetak;
+	Datum * _kraj;
+	char * _imePredavaca;
+	bool aktivan;
+	void Unos(enumPredmeti predmet, enumRazredi razred, Datum pocetak, Datum kraj, const char * imePredavaca) {
+		_predmet = enumPredmeti(predmet);
+		_razredi = enumRazredi(razred);
+		_pocetak = new Datum;
+		_pocetak->Unos(*pocetak._dan, *pocetak._mjesec, *pocetak._godina);
+		_kraj = new Datum;
+		_kraj->Unos(*kraj._dan, *kraj._mjesec, *kraj._godina);
+		_imePredavaca = new char[strlen(imePredavaca) + 1];
+		strcpy_s(_imePredavaca, strlen(imePredavaca) + 1, imePredavaca);
+		aktivan = true;
+	}
+	void Ispis() {
+		cout << "Predmet : " << Predmeti_[_predmet] << endl;
+		cout << "Razred : " << Razredi_[_razredi] << endl;
+		cout << "Datum pocetka kursa : ";
+		_pocetak->Ispis();
+		cout << "Datum zavrsetka kursa : ";
+		_kraj->Ispis();
+		cout << "Ime predavaca : " << _imePredavaca << endl;
+	}
+	void Dealociraj() {
+		delete[] _imePredavaca; _imePredavaca = nullptr;
+		_pocetak->Dealociraj();
+		_kraj->Dealociraj();
+	}
+};
+struct Polaznik {
+	Datum * _datumRodjenja;
+	char * _imePrezime;
+	void Unos(Datum datumRodjenja, const char * imePrezime) {
+		_datumRodjenja = new Datum;
+		_datumRodjenja->Unos(*datumRodjenja._dan, *datumRodjenja._mjesec, *datumRodjenja._godina);
+		_imePrezime = new char[strlen(imePrezime) + 1];
+		strcpy_s(_imePrezime, strlen(imePrezime) + 1, imePrezime);
+	}
+	void Dealociraj() {
+		delete[] _imePrezime; _imePrezime = nullptr;
+	}
+	void Ispis() {}
+};
+struct Polaganja {
+	Polaznik * _polaznik;
+	Kurs * _kurs;
+	Datum * _datumPolaganja;
+	int _ocjena; //ocjene su u rasponu od 1 do 5	
+
+	void Unos(Polaznik p, Kurs k, Datum d, int ocjena) {
+		_polaznik = new Polaznik;
+		_polaznik->Unos(*p._datumRodjenja, p._imePrezime);
+		_kurs = new Kurs;
+		_kurs->Unos(k._predmet, k._razredi, *k._pocetak, *k._kraj, k._imePredavaca);
+		_datumPolaganja = new Datum;
+		_datumPolaganja->Unos(*d._dan, *d._mjesec, *d._godina);
+		_ocjena = ocjena;
+	}
+	void Ispis() {
+		cout << "Polaznik kursa: ";
+		_polaznik->Ispis();
+		cout << "Kurs: ";
+		_kurs->Ispis();
+		cout << "Datum  polaganja: ";
+		_datumPolaganja->Ispis();
+		cout << "Ocjena -> " << _ocjena << endl;
+	}
+	void Dealociraj() {
+		_polaznik->Dealociraj();
+		delete[] _polaznik; _polaznik = nullptr;
+		_kurs->Dealociraj();
+		delete[] _kurs; _kurs = nullptr;
+		_datumPolaganja->Dealociraj();
+		delete[]_datumPolaganja; _datumPolaganja = nullptr;
+	}
+};
+
+struct EdukacijskiCentar {
+	char * _nazivCentra;
+	Kurs * _kursevi[50];//JEDAN EDUKACIJSKI CENTAR MOZE NUDITI NAJVISE 50 KURSEVA
+	int _trenutnoKurseva;
+	Polaganja * _polaganja;
+	int _trenutnoPolaganja;
+
+	void Unos(const char *naziv) {
+		_nazivCentra = new char[strlen(naziv) + 1];
+		strcpy_s(_nazivCentra, strlen(naziv) + 1, naziv);
+		_trenutnoPolaganja = 0;
+		_trenutnoKurseva = 0;
+	}
+	// jedan edukacijski centar moze nuditi vise istih kurseva (npr. Matematika), 
+	// ali se oni moraju realizovati u razlictim periodima (pocetak-kraj) tj. ne smiju se preklapati
+	// novi kurs istog tipa (npr. Matematika) se mora realizovati nakon prethodno dodanog 
+	// npr. ako prethodni kurs Matematika traje 01.03.2016 - 01.04.2016, 
+	// onda se novi kurs Matematika moze dodati jedino ako pocinje nakon 01.04.2016
+
+	bool DodajKurs(Kurs k) {
+		if (_trenutnoKurseva == 50)
+			return false;
+		for (size_t i = 0; i < _trenutnoKurseva; i++)
+		{
+			if (_kursevi[i]->_kraj->DaLiJeVeci(*k._pocetak))
+				return false;
+		}
+	
+		_kursevi[_trenutnoKurseva] = new Kurs;
+		_kursevi[_trenutnoKurseva]->Unos(k._predmet, k._razredi, *k._pocetak, *k._kraj, k._imePredavaca);
+		_trenutnoKurseva++;
+		return true;
+	}
+	//nije moguce dodati polaganje onog kursa koji nije evidentiran (registrovan, ponudjen) u tom edukacijskom centru
+	//kurseve je moguce najkasnije 15 dana od dana zavrsetka (kraja) posljednje dodanog kursa
+	//jedan polaznik moze vise puta polagati isti kurs, ali nova ocjena mora biti veca od prethodne ocjene na tom istom kursu
+	bool DodajPolaganje(Polaganja p) {
+		for (size_t i = 0; i < _trenutnoPolaganja; i++)
+		{
+			if (p._kurs->aktivan == false)
+				return false;
+		}
+		for (size_t i = 0; i < _trenutnoPolaganja; i++)
+		{
+			if (_polaganja[i]._datumPolaganja->ProvjeraZa15Dana(*p._datumPolaganja) == false)
+				return false;
+			if (strcmp(_polaganja[i]._polaznik->_imePrezime, p._polaznik->_imePrezime) == 0 && _polaganja[i]._ocjena > p._ocjena)
+				return false;
+		}
+		Polaganja *temp = new Polaganja[_trenutnoPolaganja + 1];
+		for (size_t i = 0; i < _trenutnoPolaganja; i++)
+		{
+			temp[i].Unos(*_polaganja[i]._polaznik, *_polaganja[i]._kurs, *_polaganja[i]._datumPolaganja, _polaganja[i]._ocjena);
+		}
+		if (_trenutnoPolaganja > 0) {
+			for (size_t i = 0; i < _trenutnoPolaganja; i++)
+			{
+				_polaganja[i].Dealociraj();
+			}
+			delete[] _polaganja; _polaganja = nullptr;
+		}
+		temp[_trenutnoPolaganja].Unos(*p._polaznik, *p._kurs, *p._datumPolaganja, p._ocjena);
+		_polaganja = temp;
+		_trenutnoPolaganja++;
+		return true;
+	}
+	//PolaganjaByDatumIRazred - funkcija vraca niz uspjesnih polaganja koja su realizovana u periodu OD - DO,
+	//a odnose se na bilo koji predmet u definisanom razredu (npr. II)
+
+	Polaganja *PolaganjaByDatumIRazred(Datum OD, Datum DO, enumRazredi razred, int &broj) {
+		for (size_t i = 0; i < _trenutnoPolaganja; i++)
+		{
+			if (_polaganja[i]._kurs->_razredi == razred && _polaganja[i]._kurs->_pocetak->DaLiJeVeci(OD) == true &&
+				_polaganja[i]._kurs->_kraj->DaLiJeManji(DO) == true)
+				broj++;
+		}
+		if (broj > 0) {
+			Polaganja*temp = new Polaganja[broj + 1];
+			for (size_t i = 0; i < _trenutnoPolaganja; i++)
+			{
+				temp[i].Unos(*_polaganja[i]._polaznik, *_polaganja[i]._kurs, *_polaganja[i]._datumPolaganja, _polaganja[i]._ocjena);
+			}
+			return temp;
+		}
+		return nullptr;
+	}
+
+};
+
+void main() {
+
+	/*
+	1. BROJ I TIPOVI PARAMETARA MORAJU BITI IDENTICNI ONIMA U TESTNOM CODE-U (OSIM UKOLIKO IMATE OPRAVDANU POTREBU ZA MODIFIKACIJOM). U SUPROTNOM SE RAD NEĆE BODOVATI
+	2. KREIRAJTE .DOC FAJL SA VAŠIM BROJEM INDEKSA ( NPR. IB130030.DOC BEZ IMENA I PREZIMENA), TE NA KRAJU ISPITA U NJEGA KOPIRAJTE RJEŠENJA VAŠIH ZADATAKA.
+	NE PREDAVATI .TXT ILI .CPP FAJLOVE. TAKOĐER, UKLONITE SVE DIJELOVE CODE-A KOJI NISU IMPLEMENTIRANI
+	3. TOKOM IZRADE ISPITA NIJE DOZVOLJENO KORIŠTENJE HELP-A
+	4. TOKOM IZRADE ISPITA MOGU BITI POKRENUTA SAMO TRI PROGRAMA: PDF READER (ISPITNI ZADACI), MS VISUAL STUDIO, MS WORD (U KOJI ĆETE KOPIRATI VAŠA RJEŠENJA)
+	5. BEZ OBZIRA NA TO DA LI SU ISPITNI ZADACI URAĐENI, SVI STUDENTI KOJI SU PRISTUPILI ISPITU MORAJU PREDATI SVOJ RAD
+	*/
+
+	Datum datum1, datum2, datum3, datum4, datum5, datum6;
+	datum1.Unos(26, 11, 2015);
+	datum2.Unos(29, 5, 2016);
+	datum3.Unos(5, 6, 2016);
+	datum4.Unos(15, 8, 2016);
+	datum5.Unos(13, 7, 2016);
+	datum6.Unos(22, 9, 2016);
+
+	Kurs matematika, hemija, biologija, engleski;
+	matematika.Unos(Matematika, III, datum1, datum2, "Nina Bijedic");
+	hemija.Unos(Hemija, III, datum2, datum3, "Murat Praso");
+	biologija.Unos(Biologija, IV, datum3, datum4, "Jasmin Azemovic");
+	engleski.Unos(Engleski, II, datum3, datum4, "Iris Memic");
+
+	Datum rodjenje1, rodjenje2;
+	rodjenje1.Unos(22, 8, 1982);
+	rodjenje2.Unos(23, 5, 1987);
+	Polaznik denis, zanin, indira;
+	denis.Unos(rodjenje1, "Denis Music");
+	zanin.Unos(rodjenje2, "Zanin Vejzovic");
+
+
+	Polaganja denisMatematika, zaninHemija, denisBiologija;
+	denisMatematika.Unos(denis, matematika, datum5, 3);//3 predstavlja ostvareni uspjeh/ocjenu, a uspjesno polozenim se smatra svaki kurs na kome je polaznik ostvario ocjenu veću od 1
+	zaninHemija.Unos(zanin, hemija, datum6, 93);
+
+	EdukacijskiCentar mostar;
+	mostar.Unos("ECM - Edukacijski Center Mostar");
+	if (mostar.DodajKurs(matematika)) {
+		cout << crt << "KURS USPJESNO REGISTROVAN" << crt;
+		matematika.Ispis();
+		cout << crt;
+	}
+	
+	if (mostar.DodajPolaganje(denisMatematika)) {
+		cout << crt << "POLAGANJE EVIDENTIRANO" << crt;
+		denisMatematika.Ispis();
+	}
+	Datum OD, DO;
+	int brojPolaganja = 0;
+	OD.Unos(1, 6, 2016);
+	DO.Unos(1, 8, 2016);
+	
+	Polaganja * polaganjaByDatumiRazred = mostar.PolaganjaByDatumIRazred(OD, DO, II, brojPolaganja);
+	cout << "U periodu od ";
+	OD.Ispis();
+	cout << " do ";
+	DO.Ispis();
+	cout << " uspjesno je polozeno " << brojPolaganja << " predmeta --->>> ";
+	for (size_t i = 0; i < brojPolaganja; i++)
+		polaganjaByDatumiRazred[i].Ispis();
+
+	////PretragaRekurzivno - rekurzivna funkcija koja pronalazi prosjecni uspjeh koji su polaznici tokom godine (npr.2016) ostvarili na odredjenom kursu (npr. Matematika)
+	//cout << "Prosjecan uspjeh na kursu iz predmeta Matematika u 2016 godini je " << PretragaRekurzivno(/*potrebni parametri*/) << endl;
+	////ispisuje sve informacije o edukacijskom centru. prije ispisa sortirati sve kurseve
+	//mostar.Ispis();
+
+	////izvrsiti potrebne dealokacije
+	system("pause");
+}
